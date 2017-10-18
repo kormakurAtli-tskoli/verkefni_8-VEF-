@@ -1,8 +1,6 @@
-#import bottle
 from bottle import *
 from beaker.middleware import SessionMiddleware
 
-#Session kóði hér fyrir neðan, er alltaf eins, þurfum ekkert að spá í þessu...
 session_opts = {
     'session.type': 'file',
     # 'session.cookie_expires': 300,
@@ -10,14 +8,18 @@ session_opts = {
     'session.auto': True
 }
 app = SessionMiddleware(app(), session_opts)
-#Eiginlegur Session kóði hér fyrir ofan...
 
 @route('/')
 def index():
-    return """
+  s = request.environ.get('beaker.session')
+  s['test'] = s.get('test',0) + 1
+  s.save()
+  return """
     <h2>Hvað viltu kaupa?</h2>
     <a href="set/stoll">stóll</a>
     <a href="set/bord">borð</a>
+    <a href="set/heftari">heftari</a>
+    <a href="set/sofasett">sófasett</a>
     <h3><a href="skoda">Skoða körfu</a></h3>
 """
 
@@ -25,38 +27,39 @@ def index():
 def set(item):
     s = request.environ.get('beaker.session')
     try:
-      s['karfa'] = s['karfa']+", "+item
+      s['karfa'].append(item)
     except:
-      s['karfa'] = item
+      s['karfa'] = [item]
     return """
-    <h1>"""+item+""" hefur verið bætt í körfuna þína</h1>
     <h2>Hvað viltu kaupa?</h2>
     <a href="stoll">stóll</a>
     <a href="bord">borð</a>
+    <a href="heftari">heftari</a>
+    <a href="sofasett">sófasett</a>
     <h3><a href="/skoda">Skoða körfu</a></h3>
+    <h1 style="color:red">"""+item+""" hefur verið bætt í körfuna þína</h1>
 """
 
 
 @route('/skoda')
 def set():
     s = request.environ.get('beaker.session')
+    x = ""
+    buid = []
     if s.get('karfa'):
-        return 'Skoda session ' , s['karfa']
+      for i in s['karfa']:
+        if s['karfa'].count(i) != 0:
+          if i not in buid:
+            x = x + str(s['karfa'].count(i)) + " - " + i + "<br>"
+        buid.append(i)
+      return "<h2>Karfan mín...</h2>"+x+"""<br><h4><a href="/eyda">Hreinsa körfu</a></h4><h3><a href="/">Aftur í vefverslun</a></h3>"""
     else:
-        return 'Session ekki til...'
+        return """<h2>Karfan mín...</h2><h3 style="color:red">Karfan er tóm!</h3><h3><a href="/">Aftur í vefverslun</a></h3>"""
 
 @route('/eyda')
 def set():
     s = request.environ.get('beaker.session')
     s.delete()
-    return 'Eyðum session'
+    return """<h2>Karfan mín...</h2><h3 style="color:red">Karfan er tóm!</h3><h3><a href="/">Aftur í vefverslun</a></h3>"""
 
-@route('/multi')
-def set():
-    s = request.environ.get('beaker.session')
-    for i in range(10):
-        s[i] = i
-
-    return 'Búum til mörg session í einu' , str(s[9])
-
-run(app=app)#þessi aðeins öðruvísi...
+run(app=app)
